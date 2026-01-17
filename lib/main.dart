@@ -48,10 +48,10 @@ class SyncedSms {
 // --- Global Functions (Top Level) ---
 
 // ዳታ ወደ ሰርቨር መላኪያ
-Future<void> sendSmsToBackend(String sender, String message) async {
+Future<bool> sendSmsToBackend(String sender, String message) async {
   try {
     print(
-      'Sending SMS to backend - Sender: $sender, Message length: ${message.length}',
+      '📤 Sending SMS to backend - Sender: $sender, Message length: ${message.length}',
     );
     final response = await dio.post(
       backendUrl,
@@ -62,35 +62,78 @@ Future<void> sendSmsToBackend(String sender, String message) async {
         receiveTimeout: const Duration(seconds: 10),
       ),
     );
-    print('Backend response: ${response.statusCode} - ${response.data}');
+    print('✅ Backend response: ${response.statusCode} - ${response.data}');
+    return true;
   } catch (e) {
-    print('Error sending to backend: $e');
+    print('❌ Error sending to backend: $e');
     if (e is DioException) {
-      print(
-        'Dio error details: ${e.response?.statusCode} - ${e.response?.data}',
-      );
-      print('Request URL: ${e.requestOptions.uri}');
+      print('   Status: ${e.response?.statusCode}');
+      print('   Data: ${e.response?.data}');
+      print('   URL: ${e.requestOptions.uri}');
     }
-    // Don't rethrow - let caller handle it if needed
+    return false;
   }
+}
+
+// Check if sender matches target (handles different phone number formats)
+bool isTargetSender(String? address) {
+  if (address == null) {
+    print('   ⚠️  Address is null');
+    return false;
+  }
+
+  print('   🔍 Checking sender: "$address" against target "$targetSender"');
+
+  // Direct match
+  if (address == targetSender) {
+    print('   ✅ Direct match found');
+    return true;
+  }
+
+  // Ends with match
+  if (address.endsWith(targetSender)) {
+    print('   ✅ Ends with match found');
+    return true;
+  }
+
+  // Remove any non-digit characters for comparison
+  final cleanAddress = address.replaceAll(RegExp(r'[^\d]'), '');
+  print('   🔍 Cleaned address: "$cleanAddress"');
+
+  // Check cleaned address
+  if (cleanAddress == targetSender || cleanAddress.endsWith(targetSender)) {
+    print('   ✅ Cleaned address match found');
+    return true;
+  }
+
+  print('   ❌ No match found');
+  return false;
 }
 
 // 1. Telephony Background Handler (SMS ሲመጣ ወዲያው የሚነሳ)
 @pragma('vm:entry-point')
 Future<bool> telephonyBackgroundHandler(SmsMessage message) async {
   try {
-    print('Background SMS received from: ${message.address}');
-    if (message.address != null &&
-        (message.address == targetSender ||
-            message.address!.endsWith(targetSender))) {
-      print('Processing SMS from target sender: ${message.address}');
-      await sendSmsToBackend(message.address!, message.body ?? '');
-      return true;
+    print('📱 Background SMS received from: ${message.address}');
+    print(
+      '   Body preview: ${(message.body ?? '').substring(0, (message.body?.length ?? 0) > 50 ? 50 : (message.body?.length ?? 0))}...',
+    );
+
+    if (isTargetSender(message.address)) {
+      print('✅ Target sender matched! Processing...');
+      final success = await sendSmsToBackend(
+        message.address ?? '',
+        message.body ?? '',
+      );
+      return success;
+    } else {
+      print(
+        '⏭️  SMS ignored - sender "${message.address}" is not "$targetSender"',
+      );
+      return false;
     }
-    print('SMS ignored - not from target sender');
-    return false;
   } catch (e) {
-    print('Error in background handler: $e');
+    print('❌ Error in background handler: $e');
     return false;
   }
 }
@@ -128,7 +171,6 @@ class _MyAppState extends State<MyApp> {
   final Telephony telephony = Telephony.instance;
   List<SyncedSms> _syncedSmsList = [];
   bool _isLoading = false;
-  bool _hasPermissions = false;
   bool _isListening = false;
 
   @override
@@ -138,102 +180,90 @@ class _MyAppState extends State<MyApp> {
   }
 
   void _initApp() async {
-    print('Requesting SMS permissions...');
+    print('🔐 Requesting SMS permissions...');
     bool? permissionsGranted = await telephony.requestSmsPermissions;
-    print('SMS Permissions granted: $permissionsGranted');
-
-    setState(() {
-      _hasPermissions = permissionsGranted == true;
-    });
+    print('   Permissions granted: $permissionsGranted');
 
     if (permissionsGranted == true) {
-      print('Starting SMS listener...');
+      print('✅ Permissions granted, starting SMS listener...');
       _startListening();
     } else {
       print(
-        'SMS permissions not granted! Please grant permissions in settings.',
+        '❌ Permissions NOT granted! Please grant SMS permissions in settings.',
       );
     }
     _loadSyncedSms();
   }
 
-  Future<void> _checkAndRequestPermissions() async {
-    print('Checking SMS permissions...');
-    bool? permissionsGranted = await telephony.requestSmsPermissions;
-    print('SMS Permissions granted: $permissionsGranted');
-
-    setState(() {
-      _hasPermissions = permissionsGranted == true;
-    });
-
-    if (permissionsGranted == true && !_isListening) {
-      _startListening();
-    }
-  }
-
   void _startListening() {
-    if (_isListening) {
-      print('SMS listener already active');
-      return;
-    }
-
-    print('Setting up SMS listener...');
+    print('👂 Setting up SMS listener...');
     try {
       telephony.listenIncomingSms(
         onNewMessage: (SmsMessage message) {
-          print('Foreground SMS received from: ${message.address}');
-          print('SMS body: ${message.body}');
-          if (message.address != null &&
-              (message.address == targetSender ||
-                  message.address!.endsWith(targetSender))) {
-            print(
-              'Processing foreground SMS from target sender: ${message.address}',
-            );
-            sendSmsToBackend(message.address!, message.body ?? '')
-                .then((_) {
-                  print('SMS sent to backend, refreshing list...');
-                  _loadSyncedSms();
+          print('📨 Foreground SMS received from: ${message.address}');
+          print('   Body: ${message.body}');
+
+          if (isTargetSender(message.address)) {
+            print('✅ Target sender matched! Sending to backend...');
+            sendSmsToBackend(message.address ?? '', message.body ?? '')
+                .then((success) {
+                  if (success) {
+                    print('✅ SMS sent successfully, refreshing list...');
+                    _loadSyncedSms();
+                  } else {
+                    print('❌ Failed to send SMS to backend');
+                  }
                 })
                 .catchError((error) {
-                  print('Error sending SMS to backend: $error');
+                  print('❌ Error in sendSmsToBackend: $error');
                 });
           } else {
             print(
-              'SMS ignored - sender ${message.address} is not $targetSender',
+              '⏭️  SMS ignored - sender "${message.address}" is not "$targetSender"',
             );
           }
         },
         onBackgroundMessage: telephonyBackgroundHandler,
       );
-      setState(() {
-        _isListening = true;
-      });
-      print('SMS listener started successfully');
+      print('✅ SMS listener started successfully');
+      setState(() => _isListening = true);
     } catch (e) {
-      print('Error starting SMS listener: $e');
-      setState(() {
-        _isListening = false;
-      });
+      print('❌ Error starting SMS listener: $e');
+      setState(() => _isListening = false);
     }
   }
 
   Future<void> _loadSyncedSms() async {
     setState(() => _isLoading = true);
     try {
+      print('📥 Fetching synced SMS list...');
       final response = await dio.get(
         syncSmsUrl,
         queryParameters: {'secret_key': secretKey},
+        options: Options(
+          sendTimeout: const Duration(seconds: 10),
+          receiveTimeout: const Duration(seconds: 10),
+        ),
       );
+      print('   Response status: ${response.statusCode}');
+
       if (response.statusCode == 200 && response.data['success'] == true) {
         final List data = response.data['data'];
+        print('   Found ${data.length} synced SMS');
         setState(() {
           _syncedSmsList = data
               .map((json) => SyncedSms.fromJson(json))
               .toList();
         });
+      } else {
+        print('   Unexpected response: ${response.data}');
       }
     } catch (e) {
-      print("Fetch error: $e");
+      print("❌ Fetch error: $e");
+      if (e is DioException) {
+        print('   Status: ${e.response?.statusCode}');
+        print('   Data: ${e.response?.data}');
+      }
     } finally {
       setState(() => _isLoading = false);
     }
@@ -246,106 +276,91 @@ class _MyAppState extends State<MyApp> {
       theme: ThemeData(primarySwatch: Colors.blue, useMaterial3: true),
       home: Scaffold(
         appBar: AppBar(
-          title: const Text("127 SMS Sync Active"),
+          title: Row(
+            children: [
+              const Text("127 SMS Sync"),
+              const SizedBox(width: 8),
+              Container(
+                width: 10,
+                height: 10,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: _isListening ? Colors.green : Colors.red,
+                ),
+              ),
+            ],
+          ),
           actions: [
-            IconButton(
-              icon: Icon(_hasPermissions ? Icons.check_circle : Icons.warning),
-              color: _hasPermissions ? Colors.green : Colors.orange,
-              onPressed: _checkAndRequestPermissions,
-              tooltip: _hasPermissions
-                  ? 'Permissions granted'
-                  : 'Request permissions',
-            ),
             IconButton(
               icon: const Icon(Icons.refresh),
               onPressed: _loadSyncedSms,
-              tooltip: 'Refresh list',
+              tooltip: 'Refresh SMS list',
             ),
           ],
         ),
-        body: Column(
-          children: [
-            if (!_hasPermissions)
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(12),
-                color: Colors.orange.shade100,
-                child: Row(
-                  children: [
-                    const Icon(Icons.warning, color: Colors.orange),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: const Text(
-                        'SMS permissions not granted. Tap to request.',
-                        style: TextStyle(fontSize: 12),
-                      ),
-                    ),
-                    TextButton(
-                      onPressed: _checkAndRequestPermissions,
-                      child: const Text('Grant'),
-                    ),
-                  ],
-                ),
-              ),
-            if (_hasPermissions && !_isListening)
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(12),
-                color: Colors.red.shade100,
-                child: Row(
-                  children: [
-                    const Icon(Icons.error, color: Colors.red),
-                    const SizedBox(width: 8),
-                    const Expanded(
-                      child: Text(
-                        'SMS listener not active. Please restart the app.',
-                        style: TextStyle(fontSize: 12),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            Expanded(
-              child: _isLoading
-                  ? const Center(child: CircularProgressIndicator())
-                  : RefreshIndicator(
-                      onRefresh: _loadSyncedSms,
-                      child: _syncedSmsList.isEmpty
-                          ? const Center(
-                              child: Text(
-                                "ምንም የተላከ መልዕክት የለም።\nአፑ በጀርባ እየሰራ ነው...",
+        body: _isLoading
+            ? const Center(child: CircularProgressIndicator())
+            : RefreshIndicator(
+                onRefresh: _loadSyncedSms,
+                child: _syncedSmsList.isEmpty
+                    ? Center(
+                        child: Padding(
+                          padding: const EdgeInsets.all(16.0),
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                _isListening ? Icons.check_circle : Icons.error,
+                                size: 48,
+                                color: _isListening
+                                    ? Colors.green
+                                    : Colors.orange,
                               ),
-                            )
-                          : ListView.builder(
-                              itemCount: _syncedSmsList.length,
-                              itemBuilder: (context, index) {
-                                final sms = _syncedSmsList[index];
-                                return Card(
-                                  margin: const EdgeInsets.all(8),
-                                  child: ListTile(
-                                    title: Text(
-                                      "TXID: ${sms.transactionId}",
-                                      style: const TextStyle(
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                    subtitle: Text(
-                                      "${sms.amount} ETB | ${sms.dateReceived}\n${sms.messageContent}",
-                                    ),
-                                    trailing: Icon(
-                                      Icons.check_circle,
-                                      color: sms.isUsed
-                                          ? Colors.grey
-                                          : Colors.green,
-                                    ),
-                                  ),
-                                );
-                              },
+                              const SizedBox(height: 16),
+                              Text(
+                                _isListening
+                                    ? "ምንም የተላከ መልዕክት የለም።\nአፑ በጀርባ እየሰራ ነው..."
+                                    : "SMS Listener not active!\nCheck permissions and restart app.",
+                                textAlign: TextAlign.center,
+                                style: const TextStyle(fontSize: 16),
+                              ),
+                              const SizedBox(height: 8),
+                              Text(
+                                "Listening for SMS from: $targetSender",
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.grey[600],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      )
+                    : ListView.builder(
+                        itemCount: _syncedSmsList.length,
+                        itemBuilder: (context, index) {
+                          final sms = _syncedSmsList[index];
+                          return Card(
+                            margin: const EdgeInsets.all(8),
+                            child: ListTile(
+                              title: Text(
+                                "TXID: ${sms.transactionId}",
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              subtitle: Text(
+                                "${sms.amount} ETB | ${sms.dateReceived}\n${sms.messageContent}",
+                              ),
+                              trailing: Icon(
+                                Icons.check_circle,
+                                color: sms.isUsed ? Colors.grey : Colors.green,
+                              ),
                             ),
-                    ),
-            ),
-          ],
-        ),
+                          );
+                        },
+                      ),
+              ),
       ),
     );
   }
