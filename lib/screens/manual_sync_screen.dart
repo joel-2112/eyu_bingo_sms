@@ -12,9 +12,14 @@ class _ManualSyncScreenState extends State<ManualSyncScreen> {
   final _formKey = GlobalKey<FormState>();
   final ApiService _apiService = ApiService();
 
-  final TextEditingController _senderController = TextEditingController(text: '127');
+  // መጀመሪያ በ 127 እንዲጀምር (እንደ ምርጫህ 'CBE' ማድረግም ትችላለህ)
+  final TextEditingController _senderController = TextEditingController(
+    text: '127',
+  );
   final TextEditingController _messageController = TextEditingController();
-  final TextEditingController _secretKeyController = TextEditingController(text: 'sms127eyuebingo2025');
+  final TextEditingController _secretKeyController = TextEditingController(
+    text: 'sms127eyuebingo2025',
+  );
 
   bool _isSubmitting = false;
 
@@ -32,11 +37,17 @@ class _ManualSyncScreenState extends State<ManualSyncScreen> {
       if (success) {
         _messageController.clear();
         if (mounted) {
-          _showStatusSnackBar('✅ SMS manually synced successfully!', Colors.green);
+          _showStatusSnackBar(
+            '✅ SMS manually synced successfully!',
+            Colors.green,
+          );
         }
       } else {
         if (mounted) {
-          _showStatusSnackBar('❌ Failed to sync SMS. Check connection.', Colors.redAccent);
+          _showStatusSnackBar(
+            '❌ Failed to sync SMS. Check connection.',
+            Colors.redAccent,
+          );
         }
       }
     }
@@ -45,7 +56,10 @@ class _ManualSyncScreenState extends State<ManualSyncScreen> {
   void _showStatusSnackBar(String message, Color color) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(message, style: const TextStyle(fontWeight: FontWeight.w600)),
+        content: Text(
+          message,
+          style: const TextStyle(fontWeight: FontWeight.w600),
+        ),
         backgroundColor: color,
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
@@ -56,7 +70,6 @@ class _ManualSyncScreenState extends State<ManualSyncScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // Modern Indigo Theme Colors
     const primaryIndigo = Color(0xFF3F51B5);
     const backgroundGrey = Color(0xFFF8F9FA);
 
@@ -76,7 +89,6 @@ class _ManualSyncScreenState extends State<ManualSyncScreen> {
         padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
         child: Column(
           children: [
-            // Header Illustration or Icon
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
@@ -88,7 +100,11 @@ class _ManualSyncScreenState extends State<ManualSyncScreen> {
             const SizedBox(height: 16),
             const Text(
               "Manual Sync",
-              style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.black87),
+              style: TextStyle(
+                fontSize: 22,
+                fontWeight: FontWeight.bold,
+                color: Colors.black87,
+              ),
             ),
             const SizedBox(height: 8),
             const Text(
@@ -98,7 +114,6 @@ class _ManualSyncScreenState extends State<ManualSyncScreen> {
             ),
             const SizedBox(height: 32),
 
-            // Form Container
             Container(
               padding: const EdgeInsets.all(24),
               decoration: BoxDecoration(
@@ -117,10 +132,20 @@ class _ManualSyncScreenState extends State<ManualSyncScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
+                    // --- ፈጣን መምረጫ (127 ወይም CBE) ---
+                    Row(
+                      children: [
+                        _buildQuickSelectChip("127", primaryIndigo),
+                        const SizedBox(width: 10),
+                        _buildQuickSelectChip("CBE", primaryIndigo),
+                      ],
+                    ),
+                    const SizedBox(height: 15),
+
                     _buildInputField(
                       controller: _senderController,
-                      label: "Sender ID",
-                      icon: Icons.numbers,
+                      label: "Sender ID (127 or CBE)",
+                      icon: Icons.account_balance_wallet_outlined,
                       primaryColor: primaryIndigo,
                     ),
                     const SizedBox(height: 20),
@@ -140,8 +165,7 @@ class _ManualSyncScreenState extends State<ManualSyncScreen> {
                       maxLines: 4,
                     ),
                     const SizedBox(height: 32),
-                    
-                    // Styled Button
+
                     ElevatedButton(
                       onPressed: _isSubmitting ? null : _handleSubmit,
                       style: ElevatedButton.styleFrom(
@@ -157,11 +181,18 @@ class _ManualSyncScreenState extends State<ManualSyncScreen> {
                           ? const SizedBox(
                               height: 20,
                               width: 20,
-                              child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                              child: CircularProgressIndicator(
+                                color: Colors.white,
+                                strokeWidth: 2,
+                              ),
                             )
                           : const Text(
                               "Push to Backend",
-                              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, letterSpacing: 0.5),
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                                letterSpacing: 0.5,
+                              ),
                             ),
                     ),
                   ],
@@ -174,7 +205,28 @@ class _ManualSyncScreenState extends State<ManualSyncScreen> {
     );
   }
 
-  // Custom Input Field Builder for Consistency
+  // ፈጣን መምረጫ Chip Builder
+  Widget _buildQuickSelectChip(String label, Color color) {
+    bool isSelected = _senderController.text == label;
+    return ChoiceChip(
+      label: Text(
+        label,
+        style: TextStyle(
+          color: isSelected ? Colors.white : color,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
+      selected: isSelected,
+      selectedColor: color,
+      backgroundColor: color.withOpacity(0.1),
+      onSelected: (bool selected) {
+        setState(() {
+          _senderController.text = label;
+        });
+      },
+    );
+  }
+
   Widget _buildInputField({
     required TextEditingController controller,
     required String label,
@@ -203,7 +255,10 @@ class _ManualSyncScreenState extends State<ManualSyncScreen> {
             filled: true,
             fillColor: Colors.grey[50],
             prefixIcon: Icon(icon, color: primaryColor, size: 20),
-            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 16,
+              vertical: 16,
+            ),
             enabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
               borderSide: BorderSide(color: Colors.grey.shade200),
@@ -221,7 +276,8 @@ class _ManualSyncScreenState extends State<ManualSyncScreen> {
               borderSide: const BorderSide(color: Colors.redAccent, width: 2),
             ),
           ),
-          validator: (value) => value!.isEmpty ? "This field is required" : null,
+          validator: (value) =>
+              value!.isEmpty ? "This field is required" : null,
         ),
       ],
     );
