@@ -11,22 +11,26 @@ class ApiService {
 
   final Dio _dio = Dio();
 
-  Future<bool> sendSmsToBackend(String sender, String message) async {
-    try {
-      final response = await _dio.post(
-        backendUrl,
-        data: {'sender': sender, 'message': message, 'secret_key': secretKey},
-        options: Options(
-          headers: {'Content-Type': 'application/json'},
-          sendTimeout: const Duration(seconds: 10),
-          receiveTimeout: const Duration(seconds: 10),
-        ),
-      );
-      return response.statusCode == 200;
-    } catch (e) {
-      return false;
-    }
+Future<bool> sendSmsToBackend(String sender, String message) async {
+  try {
+    final response = await _dio.post(
+      backendUrl,
+      data: {'sender': sender, 'message': message, 'secret_key': secretKey},
+      options: Options(
+        headers: {'Content-Type': 'application/json'},
+        sendTimeout: const Duration(seconds: 10),
+        receiveTimeout: const Duration(seconds: 10),
+      ),
+    );
+
+    // ማስተካከያ፡ 200 (ቀድሞ የተመዘገበ) ወይም 201 (አሁን የተመዘገበ) ከሆነ ስኬት ነው
+    return response.statusCode == 200 || response.statusCode == 201;
+    
+  } catch (e) {
+    print("SMS Sync Error: $e"); // ለዴቢጊንግ እንዲረዳህ
+    return false;
   }
+}
 
   Future<List<SyncedSms>> fetchSyncedSms() async {
     try {
