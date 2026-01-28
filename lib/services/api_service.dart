@@ -4,38 +4,34 @@ import '../models/synced_sms.dart';
 import '../models/transaction.dart';
 
 class ApiService {
-  static const String backendUrl = 'https://eyu-bingo.onrender.com/sms/receive';
-  static const String syncSmsUrl =
-      'https://eyu-bingo.onrender.com/sms/sync-sms';
+  static const String baseUrl = 'https://eyu-bingo.onrender.com';
   static const String secretKey = 'sms127eyuebingo2025';
 
-  final Dio _dio = Dio();
+  final Dio _dio = Dio(BaseOptions(
+    baseUrl: baseUrl,
+    connectTimeout: const Duration(seconds: 15), // ለታማኝ ግንኙነት
+    receiveTimeout: const Duration(seconds: 15),
+  ));
 
-Future<bool> sendSmsToBackend(String sender, String message) async {
-  try {
-    final response = await _dio.post(
-      backendUrl,
-      data: {'sender': sender, 'message': message, 'secret_key': secretKey},
-      options: Options(
-        headers: {'Content-Type': 'application/json'},
-        sendTimeout: const Duration(seconds: 10),
-        receiveTimeout: const Duration(seconds: 10),
-      ),
-    );
-
-    // ማስተካከያ፡ 200 (ቀድሞ የተመዘገበ) ወይም 201 (አሁን የተመዘገበ) ከሆነ ስኬት ነው
-    return response.statusCode == 200 || response.statusCode == 201;
-    
-  } catch (e) {
-    print("SMS Sync Error: $e"); // ለዴቢጊንግ እንዲረዳህ
-    return false;
+  // 1. SMS ወደ Backend መላክ
+  Future<bool> sendSmsToBackend(String sender, String message) async {
+    try {
+      final response = await _dio.post(
+        '/sms/receive',
+        data: {'sender': sender, 'message': message, 'secret_key': secretKey},
+      );
+      return response.statusCode == 200 || response.statusCode == 201;
+    } catch (e) {
+      debugPrint("SMS Sync Error: $e");
+      return false;
+    }
   }
-}
 
+  // 2. የተመሳሰሉ SMS መረጃዎችን ማምጣት
   Future<List<SyncedSms>> fetchSyncedSms() async {
     try {
       final response = await _dio.get(
-        syncSmsUrl,
+        '/sms/sync-sms',
         queryParameters: {'secret_key': secretKey},
       );
       if (response.statusCode == 200 && response.data['success'] == true) {
@@ -44,51 +40,57 @@ Future<bool> sendSmsToBackend(String sender, String message) async {
       }
       return [];
     } catch (e) {
+      debugPrint("Fetch SMS Error: $e");
       rethrow;
     }
   }
 
-// Fetch Transactions
-Future<List<WithdrawTransaction>> fetchWithdrawals() async {
-  try {
-    final response = await _dio.get(
-      'https://eyu-bingo.onrender.com/transactions',
-    );
-    
-    if (response.statusCode == 200) {
-      // Your controller sends: { success: true, data: result.rows, ... }
-      // So we access data first.
-      final List rows = response.data['data']; 
-      
-      return rows.map((json) => WithdrawTransaction.fromJson(json)).toList();
+  // 3. የገንዘብ ወጪ መጠየቂያዎችን (Withdrawals) ማምጣት
+  Future<List<WithdrawTransaction>> fetchWithdrawals() async {
+    try {
+      final response = await _dio.get('/transactions');
+      if (response.statusCode == 200) {
+        final List rows = response.data['data'];
+        return rows.map((json) => WithdrawTransaction.fromJson(json)).toList();
+      }
+      return [];
+    } catch (e) {
+      debugPrint("Fetch Withdrawals Error: $e");
+      rethrow;
     }
-    return [];
-  } catch (e) {
-    // debugPrint("Fetch Error: $e");
-    rethrow;
   }
-}
 
-  // Update Status
-Future<bool> updateWithdrawStatus(int id, String status, {String? note}) async {
-  try {
-    final response = await _dio.put(
-      'https://eyu-bingo.onrender.com/transactions/complete-withdraw/$id',
-      data: {
-        'status': status,          // Matches req.body.status
-        'description': note ?? "", // Matches req.body.description
-      },
-    );
-
-    // If your backend returns res.status(200).json({ success: true })
-    return response.data['success'] == true;
-  } on DioException catch (e) {
-    debugPrint("Update Failed: ${e.response?.data ?? e.message}");
-    return false;
-  } catch (e) {
-    debugPrint("Error: $e");
-    return false;
+  // 4. የትራንዛክሽን ሁኔታን ማሻሻል (Update Status)
+  Future<bool> updateWithdrawStatus(int id, String status, {String? note}) async {
+    try {
+      final response = await _dio.put(
+        '/transactions/complete-withdraw/$id',
+        data: {
+          'status': status,
+          'description': note ?? "",
+        },
+      );
+      return response.data['success'] == true;
+    } on DioException catch (e) {
+      debugPrint("Update Failed: ${e.response?.data ?? e.message}");
+      return false;
+    } catch (e) {
+      return false;
+    }
   }
-}
 
+  // 5. ሁሉንም ተጠቃሚዎች ማምጣት (አሁን ወደ ክላሱ ገብቷል)
+  Future<List<dynamic>> getAllUsers() async {
+    try {
+      final response = await _dio.get('/users');
+      if (response.statusCode == 200) {
+        final data = response.data['data'];
+        return data as List<dynamic>;
+      }
+      return [];
+    } catch (e) {
+      debugPrint("Get Users Error: $e");
+      rethrow;
+    }
+  }
 }
