@@ -9,7 +9,7 @@ class ApiService {
 
   final Dio _dio = Dio(BaseOptions(
     baseUrl: baseUrl,
-    connectTimeout: const Duration(seconds: 15), // ለታማኝ ግንኙነት
+    connectTimeout: const Duration(seconds: 15),
     receiveTimeout: const Duration(seconds: 15),
   ));
 
@@ -79,7 +79,7 @@ class ApiService {
     }
   }
 
-  // 5. ሁሉንም ተጠቃሚዎች ማምጣት (አሁን ወደ ክላሱ ገብቷል)
+  // 5. ሁሉንም ተጠቃሚዎች ማምጣት
   Future<List<dynamic>> getAllUsers() async {
     try {
       final response = await _dio.get('/users');
@@ -91,6 +91,66 @@ class ApiService {
     } catch (e) {
       debugPrint("Get Users Error: $e");
       rethrow;
+    }
+  }
+
+  // --- አዲስ የተጨመሩ የሩም ማኔጅመንት ክፍሎች ---
+
+  // 6. ሩም መመዝገብ (Create Room)
+  Future<bool> createRoom({
+    required String name,
+    required double entryFee,
+    required int maxPlayers,
+    required double commissionRate,
+    double? agentCommissionRate,
+    String? agentTelegramId,
+  }) async {
+    try {
+      final response = await _dio.post(
+        '/rooms',
+        data: {
+          'name': name.trim(),
+          'entry_fee': entryFee,
+          'max_players': maxPlayers,
+          'commission_rate': commissionRate,
+          // እዚህ ጋር ባዶ ስቲሪንግ (Empty String) እንዳይላክ ጥንቃቄ እናደርጋለን
+          if (agentCommissionRate != null) 'agent_commission_rate': agentCommissionRate,
+          if (agentTelegramId != null && agentTelegramId.isNotEmpty) 'agent_telegram_id': agentTelegramId,
+        },
+      );
+      // ባክኤንድህ 201 ነው የሚመልሰው
+      return response.statusCode == 201 || (response.data['success'] == true);
+    } on DioException catch (e) {
+      // ለዴባጊንግ እንዲመች የባክኤንዱን ትክክለኛ Error Message እዚህ እናያለን
+      debugPrint("Create Room Server Error: ${e.response?.data}");
+      return false;
+    } catch (e) {
+      debugPrint("Create Room Unexpected Error: $e");
+      return false;
+    }
+  }
+  // 7. ሁሉን ሩሞች ማምጣት (Get All Rooms)
+  Future<List<dynamic>> getAllRooms() async {
+    try {
+      final response = await _dio.get('/rooms');
+      if (response.statusCode == 200) {
+        return response.data['data'] as List<dynamic>;
+      }
+      return [];
+    } catch (e) {
+      debugPrint("Fetch Rooms Error: $e");
+      rethrow;
+    }
+  }
+
+  // 8. ሩም ማጥፋት (Delete Room)
+  Future<bool> deleteRoom(int roomId) async {
+    try {
+      final response = await _dio.delete('/rooms/$roomId');
+      return response.statusCode == 200 || (response.data['success'] == true);
+    } catch (e) {
+      debugPrint("Delete Room Error: $e");
+      return false;
     }
   }
 }
