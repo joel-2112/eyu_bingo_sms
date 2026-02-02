@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'home_screen.dart';
 import 'withdraw_request_screen.dart';
+import 'manage_rooms_screen.dart';
 import 'manual_sync_screen.dart';
 import 'user_list_screen.dart';
 class MainScaffold extends StatefulWidget {
@@ -16,6 +17,7 @@ class _MainScaffoldState extends State<MainScaffold> {
   final List<Widget> _screens = [
     const HomeScreen(),
     const WithdrawRequestScreen(),
+    const ManageRoomsScreen(),
     const UserListScreen(),
     const ManualSyncScreen(),
   ];
@@ -70,10 +72,11 @@ class _MainScaffoldState extends State<MainScaffold> {
               type: BottomNavigationBarType.fixed,
               elevation: 0,
               items: [
-                _buildNavItem(Icons.sync_alt_rounded, 'Messages', 0),
+                _buildNavItem(Icons.sms_rounded, 'Messages', 0),
                 _buildNavItem(Icons.account_balance_wallet_rounded, 'Withdraw', 1),
-                _buildNavItem(Icons.people_alt_rounded, 'Users', 2),
-                _buildNavItem(Icons.add_box_rounded, 'Manual', 3),
+                _buildNavItem(Icons.add_box_rounded, 'Rooms', 2),
+                _buildNavItem(Icons.people_alt_rounded, 'Users', 3),
+                _buildNavItem(Icons.sync_alt_rounded, 'Sync', 4),
               ],
             ),
           ),
@@ -96,7 +99,7 @@ class _MainScaffoldState extends State<MainScaffold> {
         ),
         child: Icon(
           icon,
-          size: isSelected ? 26 : 22,
+          size:22,
         ),
       ),
       label: label,

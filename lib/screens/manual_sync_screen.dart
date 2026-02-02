@@ -99,16 +99,7 @@ class _ManualSyncScreenState extends State<ManualSyncScreen> {
             ),
             const SizedBox(height: 16),
             const Text(
-              "Manual Sync",
-              style: TextStyle(
-                fontSize: 22,
-                fontWeight: FontWeight.bold,
-                color: Colors.black87,
-              ),
-            ),
-            const SizedBox(height: 8),
-            const Text(
-              "Enter the details below to manually push a missed SMS to the backend.",
+              "Enter the 127 or CBE sms below to manually push a missed SMS to the backend.",
               textAlign: TextAlign.center,
               style: TextStyle(color: Colors.grey, fontSize: 14),
             ),
