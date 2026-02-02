@@ -47,7 +47,7 @@ class _ManageRoomsScreenState extends State<ManageRoomsScreen> {
     ).showSnackBar(SnackBar(content: Text(message), backgroundColor: color));
   }
 
-void _showCreateRoomSheet() {
+  void _showCreateRoomSheet() {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -81,12 +81,12 @@ void _showCreateRoomSheet() {
                 ),
               ),
               const SizedBox(height: 25),
-              
+
               const Text(
                 "Create New Room",
                 style: TextStyle(
-                  fontSize: 22, 
-                  fontWeight: FontWeight.w900, 
+                  fontSize: 22,
+                  fontWeight: FontWeight.w900,
                   letterSpacing: -0.5,
                   color: Color(0xFF1A237E),
                 ),
@@ -98,23 +98,55 @@ void _showCreateRoomSheet() {
               const SizedBox(height: 25),
 
               // የፎርሙ ክፍሎች
-              _buildProfessionalField(_nameController, "Room Name", Icons.drive_file_rename_outline),
+              _buildProfessionalField(
+                _nameController,
+                "Room Name",
+                Icons.drive_file_rename_outline,
+              ),
               Row(
                 children: [
-                  Expanded(child: _buildProfessionalField(_feeController, "Entry Fee", Icons.payments, isNumber: true)),
+                  Expanded(
+                    child: _buildProfessionalField(
+                      _feeController,
+                      "Entry Fee",
+                      Icons.payments,
+                      isNumber: true,
+                    ),
+                  ),
                   const SizedBox(width: 15),
-                  Expanded(child: _buildProfessionalField(_playersController, "Max Players", Icons.groups, isNumber: true)),
+                  Expanded(
+                    child: _buildProfessionalField(
+                      _playersController,
+                      "Max Players",
+                      Icons.groups,
+                      isNumber: true,
+                    ),
+                  ),
                 ],
               ),
-              _buildProfessionalField(_commController, "Admin Commission (%)", Icons.pie_chart, isNumber: true),
-              
+              _buildProfessionalField(
+                _commController,
+                "Admin Commission (%)",
+                Icons.pie_chart,
+                isNumber: true,
+              ),
+
               const Padding(
                 padding: EdgeInsets.symmetric(vertical: 10),
                 child: Divider(height: 1, thickness: 0.5),
               ),
-              
-              _buildProfessionalField(_agentCommController, "Agent Comm (%)", Icons.badge, isNumber: true),
-              _buildProfessionalField(_agentIdController, "Agent Telegram ID", Icons.alternate_email),
+
+              _buildProfessionalField(
+                _agentCommController,
+                "Agent Comm (%)",
+                Icons.badge,
+                isNumber: true,
+              ),
+              _buildProfessionalField(
+                _agentIdController,
+                "Agent Telegram ID",
+                Icons.alternate_email,
+              ),
 
               const SizedBox(height: 30),
 
@@ -136,7 +168,9 @@ void _showCreateRoomSheet() {
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF3F51B5),
                     foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(18),
+                    ),
                     elevation: 0,
                   ),
                   onPressed: _submitRoom,
@@ -153,7 +187,7 @@ void _showCreateRoomSheet() {
     );
   }
 
-Future<void> _submitRoom() async {
+  Future<void> _submitRoom() async {
     if (_nameController.text.isEmpty || _feeController.text.isEmpty) {
       _showSnackBar("እባክዎ አስፈላጊ መረጃዎችን ያሟሉ", Colors.orange);
       return;
@@ -161,8 +195,8 @@ Future<void> _submitRoom() async {
 
     // ፐርሰንት ከሆነ (ለምሳሌ 35 ካለ ተጠቃሚው) ወደ 0.35 መቀየር አለበት
     double comm = (double.tryParse(_commController.text) ?? 35) / 100;
-    double? agentComm = _agentCommController.text.isNotEmpty 
-        ? (double.tryParse(_agentCommController.text)! / 100) 
+    double? agentComm = _agentCommController.text.isNotEmpty
+        ? (double.tryParse(_agentCommController.text)! / 100)
         : null;
 
     final success = await _apiService.createRoom(
@@ -185,7 +219,7 @@ Future<void> _submitRoom() async {
       _showSnackBar("መፍጠር አልተቻለም (400) - ዳታውን ያረጋግጡ", Colors.red);
     }
   }
-  
+
   void _clearControllers() {
     _nameController.clear();
     _feeController.clear();
@@ -195,11 +229,23 @@ Future<void> _submitRoom() async {
     _agentIdController.clear();
   }
 
-  Future<void> _deleteRoom(int id) async {
+  Future<void> _deleteRoom(String id) async {
+    // 1. አይዲው ባዶ መሆኑን ቼክ እናድርግ
+    if (id.isEmpty) {
+      _showSnackBar("ስህተት፡ የሩም መለያ (ID) አልተገኘም", Colors.red);
+      return;
+    }
+
     final success = await _apiService.deleteRoom(id);
+
     if (success) {
-      _fetchRooms();
-      _showSnackBar("ሩም ተሰርዟል", Colors.blueGrey);
+      if (mounted) {
+        _fetchRooms();
+        _showSnackBar("ሩም ተሰርዟል", Colors.blueGrey);
+      }
+    } else {
+      // ስህተት ካለ ለተጠቃሚው ማሳወቅ
+      _showSnackBar("ሩሙን መሰረዝ አልተቻለም (Error 400)", Colors.red);
     }
   }
 
@@ -217,8 +263,12 @@ Future<void> _submitRoom() async {
         elevation: 0,
         actions: [
           IconButton(
-            onPressed: _showCreateRoomSheet, 
-            icon: const Icon(Icons.add_circle_outline, color: Color(0xFF3F51B5), size: 28),
+            onPressed: _showCreateRoomSheet,
+            icon: const Icon(
+              Icons.add_circle_outline,
+              color: Color(0xFF3F51B5),
+              size: 28,
+            ),
             tooltip: "Add Room",
           ),
           IconButton(onPressed: _fetchRooms, icon: const Icon(Icons.refresh)),
@@ -245,6 +295,8 @@ Future<void> _submitRoom() async {
   }
 
   Widget _buildRoomCard(dynamic room) {
+    final String roomId = room['id']?.toString() ?? "";
+
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
       decoration: BoxDecoration(
@@ -269,36 +321,50 @@ Future<void> _submitRoom() async {
         ),
         trailing: IconButton(
           icon: const Icon(Icons.delete_outline, color: Colors.redAccent),
-          onPressed: () => _confirmDelete(room['id']),
+          onPressed: () {
+            _confirmDelete(roomId);
+          },
         ),
       ),
     );
   }
 
-  void _confirmDelete(int id) {
+  void _confirmDelete(String roomId) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text("ሩም ይጥፋ?"),
-        content: const Text("ይህንን ሩም ማጥፋት እርግጠኛ ነዎት?"),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Text("ሩም ማጥፊያ"),
+        content: const Text("እርግጠኛ ነዎት ይህንን ሩም ማጥፋት ይፈልጋሉ?"),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text("አይ"),
+            child: const Text("ተመለስ", style: TextStyle(color: Colors.grey)),
           ),
-          TextButton(
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.redAccent,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
+            ),
             onPressed: () {
-              Navigator.pop(context);
-              _deleteRoom(id);
+              Navigator.pop(context); // ዳያሎጉን መዝጋት
+              _deleteRoom(roomId); // ወደ ዋናው የዲሊት ፋንክሽን መላክ
             },
-            child: const Text("አዎ አጥፋ", style: TextStyle(color: Colors.red)),
+            child: const Text("አጥፋ", style: TextStyle(color: Colors.white)),
           ),
         ],
       ),
     );
   }
 
-Widget _buildProfessionalField(TextEditingController controller, String label, IconData icon, {bool isNumber = false}) {
+  Widget _buildProfessionalField(
+    TextEditingController controller,
+    String label,
+    IconData icon, {
+    bool isNumber = false,
+  }) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 16),
       child: Column(
@@ -324,7 +390,10 @@ Widget _buildProfessionalField(TextEditingController controller, String label, I
               ),
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(15),
-                borderSide: const BorderSide(color: Color(0xFF3F51B5), width: 1.5),
+                borderSide: const BorderSide(
+                  color: Color(0xFF3F51B5),
+                  width: 1.5,
+                ),
               ),
               contentPadding: const EdgeInsets.symmetric(vertical: 18),
             ),

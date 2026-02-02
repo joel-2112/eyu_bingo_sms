@@ -7,11 +7,13 @@ class ApiService {
   static const String baseUrl = 'https://eyu-bingo.onrender.com';
   static const String secretKey = 'sms127eyuebingo2025';
 
-  final Dio _dio = Dio(BaseOptions(
-    baseUrl: baseUrl,
-    connectTimeout: const Duration(seconds: 15),
-    receiveTimeout: const Duration(seconds: 15),
-  ));
+  final Dio _dio = Dio(
+    BaseOptions(
+      baseUrl: baseUrl,
+      connectTimeout: const Duration(seconds: 15),
+      receiveTimeout: const Duration(seconds: 15),
+    ),
+  );
 
   // 1. SMS ወደ Backend መላክ
   Future<bool> sendSmsToBackend(String sender, String message) async {
@@ -61,14 +63,15 @@ class ApiService {
   }
 
   // 4. የትራንዛክሽን ሁኔታን ማሻሻል (Update Status)
-  Future<bool> updateWithdrawStatus(int id, String status, {String? note}) async {
+  Future<bool> updateWithdrawStatus(
+    int id,
+    String status, {
+    String? note,
+  }) async {
     try {
       final response = await _dio.put(
         '/transactions/complete-withdraw/$id',
-        data: {
-          'status': status,
-          'description': note ?? "",
-        },
+        data: {'status': status, 'description': note ?? ""},
       );
       return response.data['success'] == true;
     } on DioException catch (e) {
@@ -94,8 +97,6 @@ class ApiService {
     }
   }
 
-  // --- አዲስ የተጨመሩ የሩም ማኔጅመንት ክፍሎች ---
-
   // 6. ሩም መመዝገብ (Create Room)
   Future<bool> createRoom({
     required String name,
@@ -114,8 +115,10 @@ class ApiService {
           'max_players': maxPlayers,
           'commission_rate': commissionRate,
           // እዚህ ጋር ባዶ ስቲሪንግ (Empty String) እንዳይላክ ጥንቃቄ እናደርጋለን
-          if (agentCommissionRate != null) 'agent_commission_rate': agentCommissionRate,
-          if (agentTelegramId != null && agentTelegramId.isNotEmpty) 'agent_telegram_id': agentTelegramId,
+          if (agentCommissionRate != null)
+            'agent_commission_rate': agentCommissionRate,
+          if (agentTelegramId != null && agentTelegramId.isNotEmpty)
+            'agent_telegram_id': agentTelegramId,
         },
       );
       // ባክኤንድህ 201 ነው የሚመልሰው
@@ -129,6 +132,7 @@ class ApiService {
       return false;
     }
   }
+
   // 7. ሁሉን ሩሞች ማምጣት (Get All Rooms)
   Future<List<dynamic>> getAllRooms() async {
     try {
@@ -143,14 +147,24 @@ class ApiService {
     }
   }
 
-  // 8. ሩም ማጥፋት (Delete Room)
-  Future<bool> deleteRoom(int roomId) async {
+  // 8. ሩም ማጥፋት (Delete Room) service
+  Future<bool> deleteRoom(String roomId) async {
     try {
+      // 1. አይዲው ባዶ አለመሆኑን ማረጋገጥ
+      if (roomId.isEmpty) {
+        debugPrint("Delete Error: Room ID is empty");
+        return false;
+      }
       final response = await _dio.delete('/rooms/$roomId');
-      return response.statusCode == 200 || (response.data['success'] == true);
+      // 2. ሰርቨሩ ስኬታማ ከሆነ 200 ወይም 204 ይመልሳል
+      return response.statusCode == 200 || response.statusCode == 204;
+    } on DioException catch (e) {
+      debugPrint("Delete Room Server Error: ${e.response?.data}");
+      return false;
     } catch (e) {
-      debugPrint("Delete Room Error: $e");
+      debugPrint("Delete Room Unexpected Error: $e");
       return false;
     }
   }
+
 }
