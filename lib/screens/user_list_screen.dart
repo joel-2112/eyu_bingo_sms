@@ -166,6 +166,7 @@ class _UserListScreenState extends State<UserListScreen> {
   Widget _buildUserCard(dynamic user) {
     String username = user['username']?.toString() ?? "No Username";
     String phoneNumber = user['phone_number']?.toString() ?? "No Number";
+    String telegramId = user['telegram_id']?.toString() ?? "No Id";
     String mainBalance = user['balance']?.toString() ?? "0.00";
     String bonusBalance = user['bonus_balance']?.toString() ?? "0.00";
     String firstLetter = username.isNotEmpty ? username[0].toUpperCase() : "?";
@@ -207,6 +208,10 @@ class _UserListScreenState extends State<UserListScreen> {
                     ),
                     Text(
                       phoneNumber,
+                      style: TextStyle(color: Colors.grey[600], fontSize: 13),
+                    ),
+                    Text(
+                      telegramId,
                       style: TextStyle(color: Colors.grey[600], fontSize: 13),
                     ),
                   ],

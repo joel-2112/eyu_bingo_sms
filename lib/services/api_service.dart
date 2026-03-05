@@ -4,7 +4,7 @@ import '../models/synced_sms.dart';
 import '../models/transaction.dart';
 
 class ApiService {
-  static const String baseUrl = 'https://eyu-bingo.onrender.com';
+  static const String baseUrl = 'https://api.asinaye.eyuelkassahun.com';
   static const String secretKey = 'sms127eyuebingo2025';
 
   final Dio _dio = Dio(
