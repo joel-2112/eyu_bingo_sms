@@ -1,25 +1,25 @@
 class SmsService {
-  // ቴሌብር አጭር ቁጥር እና የንግድ ባንክ ስም
+  // ቴሌብር አጭር ቁጥር (Official Short Code)
   static const String telebirrSender = '127';
-  static const String cbeSender = 'CBE';
 
   static bool isTargetSender(String? address) {
     if (address == null) return false;
     
-    // የላኪውን አድራሻ ወደ ትልቅ ሆሄያት እንቀይረው (Cbe, cbe, CBE ሁሉንም እንዲያነብ)
+    // የላኪውን አድራሻ እናፅዳ (Space ካለ እና ወደ ትልቅ ሆሄያት)
     final String cleanAddress = address.trim().toUpperCase();
 
-    // 1. ለቴሌብር ማረጋገጫ (127)
+    // 1. ለቴሌብር ማረጋገጫ (ልክ "127" ከሆነ ወይም በ "127" የሚያልቅ ከሆነ)
+    // አንዳንድ የኢትዮጵያ ስልኮች ላይ አድራሻው በ +251127 ሊመጣ ስለሚችል endsWith ጠቃሚ ነው
     if (cleanAddress == telebirrSender || cleanAddress.endsWith(telebirrSender)) {
       return true;
     }
 
-    // 2. ለኢትዮጵያ ንግድ ባንክ ማረጋገጫ (CBE)
-    if (cleanAddress == cbeSender || cleanAddress.contains(cbeSender)) {
+    // 2. በስም "TELEBIRR" ተብሎ ከመጣ (አልፎ አልፎ በአድራሻ ቦታ ስሙ ሊመጣ ስለሚችል)
+    if (cleanAddress.contains('TELEBIRR')) {
       return true;
     }
 
-    // 3. ቁጥር ብቻ ከሆነ (አንዳንድ ስልኮች ላይ በቁጥር ሊመጣ ስለሚችል)
+    // 3. ቁጥር ብቻ አውጥተን እንፈትሽ (ለምሳሌ "+251 127" ወደ "251127" ይቀየራል)
     final numericAddress = address.replaceAll(RegExp(r'[^\d]'), '');
     if (numericAddress == telebirrSender || numericAddress.endsWith(telebirrSender)) {
       return true;
