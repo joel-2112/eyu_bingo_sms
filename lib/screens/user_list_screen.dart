@@ -58,6 +58,10 @@ class _UserListScreenState extends State<UserListScreen> {
             double balA = double.tryParse(a['balance']?.toString() ?? "0") ?? 0;
             double balB = double.tryParse(b['balance']?.toString() ?? "0") ?? 0;
             return balB.compareTo(balA);
+          case 'bonus_balance':
+            double bonusBalA = double.tryParse(a['bonus_balance']?.toString() ?? "0") ?? 0;
+            double bonusBalB = double.tryParse(b['bonus_balance']?.toString() ?? "0") ?? 0;
+            return bonusBalB.compareTo(bonusBalA);
           case 'tickets':
             int tixA = a['totalTicketsBought'] ?? 0;
             int tixB = b['totalTicketsBought'] ?? 0;
@@ -93,22 +97,56 @@ class _UserListScreenState extends State<UserListScreen> {
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             child: Column(
               children: [
-                TextField(
-                  onChanged: (value) {
-                    _searchQuery = value;
-                    _applyFiltersAndSort();
-                  },
-                  decoration: InputDecoration(
-                    hintText: "በስም ወይም በስልክ ይፈልጉ...",
-                    prefixIcon: const Icon(Icons.search, color: primaryIndigo),
-                    filled: true,
-                    fillColor: Colors.grey[100],
-                    contentPadding: const EdgeInsets.symmetric(vertical: 0),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(15),
-                      borderSide: BorderSide.none,
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        onChanged: (value) {
+                          _searchQuery = value;
+                          _applyFiltersAndSort();
+                        },
+                        decoration: InputDecoration(
+                          hintText: "በስም ወይም በስልክ ይፈልጉ...",
+                          prefixIcon: const Icon(Icons.search, color: primaryIndigo),
+                          filled: true,
+                          fillColor: Colors.grey[100],
+                          contentPadding: const EdgeInsets.symmetric(vertical: 0),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(15),
+                            borderSide: BorderSide.none,
+                          ),
+                        ),
+                      ),
                     ),
-                  ),
+                    const SizedBox(width: 12),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: primaryIndigo.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            "${_filteredUsers.length}",
+                            style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16,
+                              color: primaryIndigo,
+                            ),
+                          ),
+                          Text(
+                            "Total Users",
+                            style: TextStyle(
+                              fontSize: 10,
+                              color: primaryIndigo.withOpacity(0.8),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                 ),
                 const SizedBox(height: 10),
                 SingleChildScrollView(
@@ -118,6 +156,8 @@ class _UserListScreenState extends State<UserListScreen> {
                       _buildSortChip("Latest", "createdAt"),
                       const SizedBox(width: 8),
                       _buildSortChip("Top Balance", "balance"),
+                      const SizedBox(width: 8),
+                      _buildSortChip("Top Bonus", "bonus_balance"),
                       const SizedBox(width: 8),
                       _buildSortChip("Most Tickets", "tickets"),
                       const SizedBox(width: 8),
