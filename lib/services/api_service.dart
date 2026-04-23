@@ -82,21 +82,48 @@ class ApiService {
     }
   }
 
-  // 5. ሁሉንም ተጠቃሚዎች ማምጣት
-  Future<List<dynamic>> getAllUsers() async {
-    try {
-      final response = await _dio.get('/users');
-      if (response.statusCode == 200) {
-        final data = response.data['data'];
-        return data as List<dynamic>;
-      }
-      return [];
-    } catch (e) {
-      debugPrint("Get Users Error: $e");
-      rethrow;
-    }
+Future<Map<String, dynamic>> getAllUsers({
+  int page = 1, 
+  int limit = 10,
+  String sortBy = 'createdAt',
+}) async {
+  try {
+    final response = await _dio.get(
+      '/users',
+      queryParameters: {
+        'page': page,
+        'limit': limit,
+        'sortBy': sortBy,
+      },
+    );
+    return response.data;
+  } catch (e) {
+    rethrow;
   }
+}
 
+Future<Map<String, dynamic>> searchUsers({
+  required String query,
+  int page = 1, 
+  int limit = 10,
+  String sortBy = 'createdAt',
+}) async {
+  try {
+    final response = await _dio.get(
+      '/users/search',
+      queryParameters: {
+        'query': query,
+        'page': page,
+        'limit': limit,
+        'sortBy': sortBy,
+      },
+    );
+    return response.data;
+  } catch (e) {
+    rethrow;
+  }
+}
+ 
   // 6. ሩም መመዝገብ (Create Room)
   Future<bool> createRoom({
     required String name,
@@ -166,5 +193,4 @@ class ApiService {
       return false;
     }
   }
-
 }
