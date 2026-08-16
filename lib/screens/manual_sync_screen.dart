@@ -201,8 +201,9 @@ class _ManualSyncScreenState extends State<ManualSyncScreen> {
           ],
         ),
       ),
-    );
-  }
+    ),
+  );
+}
 
   // ፈጣን መምረጫ Chip Builder
   Widget _buildQuickSelectChip(String label, Color color) {
