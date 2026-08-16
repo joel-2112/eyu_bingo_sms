@@ -72,6 +72,7 @@ class _ManualSyncScreenState extends State<ManualSyncScreen> {
   Widget build(BuildContext context) {
     const primaryIndigo = Color(0xFF3F51B5);
     const backgroundGrey = Color(0xFFF8F9FA);
+    final bottomInset = MediaQuery.of(context).padding.bottom;
 
     return Scaffold(
       backgroundColor: backgroundGrey,
@@ -85,9 +86,16 @@ class _ManualSyncScreenState extends State<ManualSyncScreen> {
         elevation: 0,
         foregroundColor: Colors.black87,
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
-        child: Column(
+      body: SafeArea(
+        bottom: false,
+        child: SingleChildScrollView(
+          padding: EdgeInsets.only(
+            left: 24.0,
+            right: 24.0,
+            top: 16.0,
+            bottom: bottomInset + 90,
+          ),
+          child: Column(
           children: [
             Container(
               padding: const EdgeInsets.all(16),

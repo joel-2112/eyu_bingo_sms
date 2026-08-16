@@ -251,6 +251,8 @@ class _ManageRoomsScreenState extends State<ManageRoomsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final bottomInset = MediaQuery.of(context).padding.bottom;
+
     return Scaffold(
       backgroundColor: const Color(0xFFF8F9FE),
       appBar: AppBar(
@@ -274,23 +276,26 @@ class _ManageRoomsScreenState extends State<ManageRoomsScreen> {
           IconButton(onPressed: _fetchRooms, icon: const Icon(Icons.refresh)),
         ],
       ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : _rooms.isEmpty
-          ? const Center(child: Text("ምንም ሩም የለም"))
-          : ListView.builder(
-              padding: const EdgeInsets.only(
-                right: 16,
-                left: 16,
-                top: 10,
-                bottom: 80,
+      body: SafeArea(
+        bottom: false,
+        child: _isLoading
+            ? const Center(child: CircularProgressIndicator())
+            : _rooms.isEmpty
+            ? const Center(child: Text("ምንም ሩም የለም"))
+            : ListView.builder(
+                padding: EdgeInsets.only(
+                  right: 16,
+                  left: 16,
+                  top: 10,
+                  bottom: bottomInset + 90,
+                ),
+                itemCount: _rooms.length,
+                itemBuilder: (context, index) {
+                  final room = _rooms[index];
+                  return _buildRoomCard(room);
+                },
               ),
-              itemCount: _rooms.length,
-              itemBuilder: (context, index) {
-                final room = _rooms[index];
-                return _buildRoomCard(room);
-              },
-            ),
+      ),
     );
   }
 

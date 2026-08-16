@@ -102,28 +102,50 @@ Future<Map<String, dynamic>> getAllUsers({
   }
 }
 
-Future<Map<String, dynamic>> searchUsers({
-  required String query,
-  int page = 1, 
-  int limit = 10,
-  String sortBy = 'createdAt',
-}) async {
-  try {
-    final response = await _dio.get(
-      '/users/search',
-      queryParameters: {
-        'query': query,
-        'page': page,
-        'limit': limit,
-        'sortBy': sortBy,
-      },
-    );
-    return response.data;
-  } catch (e) {
-    rethrow;
+  Future<Map<String, dynamic>> searchUsers({
+    required String query,
+    int page = 1,
+    int limit = 10,
+    String sortBy = 'createdAt',
+  }) async {
+    try {
+      final response = await _dio.get(
+        '/users/search',
+        queryParameters: {
+          'query': query,
+          'page': page,
+          'limit': limit,
+          'sortBy': sortBy,
+        },
+      );
+      return response.data;
+    } catch (e) {
+      rethrow;
+    }
   }
-}
- 
+
+  // 5.5. Export users to CSV
+  Future<dynamic> exportUsersCsv() async {
+    try {
+      final response = await _dio.get(
+        '/users/export-csv',
+        options: Options(responseType: ResponseType.bytes),
+      );
+      return response.data;
+    } catch (e) {
+      try {
+        final response = await _dio.get(
+          '/export-csv',
+          options: Options(responseType: ResponseType.bytes),
+        );
+        return response.data;
+      } catch (err) {
+        debugPrint("Export CSV Error: $err");
+        rethrow;
+      }
+    }
+  }
+
   // 6. ሩም መመዝገብ (Create Room)
   Future<bool> createRoom({
     required String name,

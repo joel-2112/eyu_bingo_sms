@@ -64,6 +64,8 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final bottomInset = MediaQuery.of(context).padding.bottom;
+
     return Scaffold(
       backgroundColor: backgroundGrey,
       appBar: AppBar(
@@ -102,22 +104,25 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ],
       ),
-      body: _isLoading
-          ? Center(child: CircularProgressIndicator(color: primaryIndigo))
-          : RefreshIndicator(
-              color: primaryIndigo,
-              onRefresh: _loadSyncedSms,
-              child: _syncedSmsList.isEmpty
-                  ? _buildEmptyState()
-                  : ListView.builder(
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                      itemCount: _syncedSmsList.length,
-                      itemBuilder: (context, index) => ModernSmsCard(
-                        sms: _syncedSmsList[index],
-                        primaryIndigo: primaryIndigo,
+      body: SafeArea(
+        bottom: false,
+        child: _isLoading
+            ? Center(child: CircularProgressIndicator(color: primaryIndigo))
+            : RefreshIndicator(
+                color: primaryIndigo,
+                onRefresh: _loadSyncedSms,
+                child: _syncedSmsList.isEmpty
+                    ? _buildEmptyState()
+                    : ListView.builder(
+                        padding: EdgeInsets.only(bottom: bottomInset + 90, top: 8),
+                        itemCount: _syncedSmsList.length,
+                        itemBuilder: (context, index) => ModernSmsCard(
+                          sms: _syncedSmsList[index],
+                          primaryIndigo: primaryIndigo,
+                        ),
                       ),
-                    ),
-            ),
+              ),
+      ),
     );
   }
 
@@ -140,117 +145,140 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 }
 
-// --- አዲሱ የካርድ ኮድ (Stateful ስለሆነ መዘርጋት ይችላል) ---
-class ModernSmsCard extends StatefulWidget {
+class ModernSmsCard extends StatelessWidget {
   final SyncedSms sms;
   final Color primaryIndigo;
 
   const ModernSmsCard({super.key, required this.sms, required this.primaryIndigo});
 
-  @override
-  State<ModernSmsCard> createState() => _ModernSmsCardState();
-}
-
-class _ModernSmsCardState extends State<ModernSmsCard> {
-  bool _isExpanded = false;
-
-  @override
-  Widget build(BuildContext context) {
-    return AnimatedContainer(
-      duration: const Duration(milliseconds: 300),
-      curve: Curves.easeInOut,
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.03),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(16),
-        child: IntrinsicHeight(
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
+  void _showSmsDetailBottomSheet(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => Container(
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+        ),
+        padding: EdgeInsets.only(
+          bottom: MediaQuery.of(context).viewInsets.bottom + 24,
+          left: 20,
+          right: 20,
+          top: 12,
+        ),
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Container(
-                width: 6,
-                color: widget.sms.isUsed ? Colors.grey[400] : widget.primaryIndigo,
-              ),
-              Expanded(
-                child: Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text(
-                            "TXID: ${widget.sms.transactionId}",
-                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: Colors.black87),
-                          ),
-                          GestureDetector(
-                            onTap: () => setState(() => _isExpanded = !_isExpanded),
-                            child: Icon(
-                              _isExpanded ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
-                              color: widget.primaryIndigo,
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 8),
-                      // የጽሁፉ ሁኔታ እዚህ ይወሰናል
-                      Text(
-                        widget.sms.messageContent,
-                        style: TextStyle(color: Colors.grey[700], fontSize: 13, height: 1.4),
-                        maxLines: _isExpanded ? null : 2, // ከተዘረጋ ገደብ የለውም
-                        overflow: _isExpanded ? TextOverflow.visible : TextOverflow.ellipsis,
-                      ),
-                      const SizedBox(height: 12),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                            decoration: BoxDecoration(
-                              color: widget.sms.isUsed ? Colors.grey[100] : widget.primaryIndigo.withOpacity(0.1),
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: Text(
-                              widget.sms.isUsed ? "Used" : "Active",
-                              style: TextStyle(
-                                fontSize: 10,
-                                fontWeight: FontWeight.bold,
-                                color: widget.sms.isUsed ? Colors.grey[600] : widget.primaryIndigo,
-                              ),
-                            ),
-                          ),
-                          Text(
-                            widget.sms.dateReceived,
-                            style: TextStyle(color: Colors.grey[500], fontSize: 11),
-                          ),
-                        ],
-                      ),
-                      if (_isExpanded) ...[
-                        const Divider(height: 24),
-                        Row(
-                          children: [
-                            Icon(Icons.payments_outlined, size: 16, color: widget.primaryIndigo),
-                            const SizedBox(width: 4),
-                            Text(
-                              "Amount: ${widget.sms.amount} ETB",
-                              style: TextStyle(fontWeight: FontWeight.bold, color: widget.primaryIndigo, fontSize: 14),
-                            ),
-                          ],
-                        ),
-                      ]
-                    ],
+              Center(
+                child: Container(
+                  width: 44,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: Colors.grey[300],
+                    borderRadius: BorderRadius.circular(2),
                   ),
+                ),
+              ),
+              const SizedBox(height: 18),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    "TXID: ${sms.transactionId}",
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: primaryIndigo,
+                    ),
+                  ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: sms.isUsed ? Colors.grey[100] : primaryIndigo.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text(
+                      sms.isUsed ? "Used" : "Active",
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                        color: sms.isUsed ? Colors.grey[600] : primaryIndigo,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              const Divider(height: 1),
+              const SizedBox(height: 16),
+              Row(
+                children: [
+                  Icon(Icons.payments_outlined, size: 20, color: primaryIndigo),
+                  const SizedBox(width: 8),
+                  Text(
+                    "Amount: ${sms.amount} ETB",
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF1A1A2E),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Icon(Icons.access_time_rounded, size: 18, color: Colors.grey[500]),
+                  const SizedBox(width: 8),
+                  Text(
+                    "Received: ${sms.dateReceived}",
+                    style: TextStyle(fontSize: 13, color: Colors.grey[700]),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 20),
+              const Text(
+                "MESSAGE CONTENT",
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.grey,
+                  letterSpacing: 0.8,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF8F9FE),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.grey.withOpacity(0.2)),
+                ),
+                child: SelectableText(
+                  sms.messageContent,
+                  style: const TextStyle(
+                    fontSize: 13,
+                    height: 1.5,
+                    color: Color(0xFF2C3E50),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 24),
+              SizedBox(
+                width: double.infinity,
+                height: 48,
+                child: OutlinedButton(
+                  onPressed: () => Navigator.pop(context),
+                  style: OutlinedButton.styleFrom(
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                  ),
+                  child: const Text("Close", style: TextStyle(fontWeight: FontWeight.bold)),
                 ),
               ),
             ],
@@ -259,4 +287,87 @@ class _ModernSmsCardState extends State<ModernSmsCard> {
       ),
     );
   }
-}
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 14, vertical: 5),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.02),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+        border: Border.all(color: Colors.grey.withOpacity(0.08)),
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(14),
+        child: InkWell(
+          onTap: () => _showSmsDetailBottomSheet(context),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            child: Row(
+              children: [
+                Container(
+                  width: 4,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: sms.isUsed ? Colors.grey[400] : primaryIndigo,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            "TXID: ${sms.transactionId}",
+                            style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 14,
+                              color: Color(0xFF1A1A2E),
+                            ),
+                          ),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                            decoration: BoxDecoration(
+                              color: sms.isUsed ? Colors.grey[100] : primaryIndigo.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Text(
+                              sms.isUsed ? "Used" : "Active",
+                              style: TextStyle(
+                                fontSize: 10,
+                                fontWeight: FontWeight.bold,
+                                color: sms.isUsed ? Colors.grey[600] : primaryIndigo,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        "${sms.amount} ETB · ${sms.dateReceived}",
+                        style: TextStyle(color: Colors.grey[600], fontSize: 12),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Icon(Icons.chevron_right_rounded, size: 18, color: Colors.grey[400]),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
