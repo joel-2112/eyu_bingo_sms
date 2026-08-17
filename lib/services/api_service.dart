@@ -124,26 +124,77 @@ Future<Map<String, dynamic>> getAllUsers({
     }
   }
 
-  // 5.5. Export users to CSV
+  // 5.5. Export ALL users to CSV
   Future<dynamic> exportUsersCsv() async {
+    // 1. Try server endpoint first
     try {
       final response = await _dio.get(
         '/users/export-csv',
-        options: Options(responseType: ResponseType.bytes),
+        options: Options(
+          responseType: ResponseType.bytes,
+          validateStatus: (status) => true,
+        ),
       );
-      return response.data;
-    } catch (e) {
-      try {
-        final response = await _dio.get(
-          '/export-csv',
-          options: Options(responseType: ResponseType.bytes),
-        );
+      if (response.statusCode == 200 && response.data != null) {
         return response.data;
-      } catch (err) {
-        debugPrint("Export CSV Error: $err");
-        rethrow;
       }
+    } catch (_) {}
+
+    // 2. Fallback: Fetch ALL users from database across all pages
+    final List<dynamic> allUsers = await fetchAllUsersForExport();
+    final csvString = _generateUsersCsv(allUsers);
+    return csvString.codeUnits;
+  }
+
+  Future<List<dynamic>> fetchAllUsersForExport() async {
+    final List<dynamic> allUsers = [];
+    int currentPage = 1;
+    int totalPages = 1;
+
+    do {
+      try {
+        final res = await getAllUsers(page: currentPage, limit: 100);
+        final List pageData = res['data'] ?? [];
+        allUsers.addAll(pageData);
+
+        totalPages = res['pagination']?['totalPages'] ?? 1;
+        currentPage++;
+      } catch (e) {
+        debugPrint("Error fetching users page $currentPage: $e");
+        break;
+      }
+    } while (currentPage <= totalPages);
+
+    return allUsers;
+  }
+
+  String _generateUsersCsv(List<dynamic> users) {
+    final buffer = StringBuffer();
+    buffer.writeln('ID,Username,Phone Number,Telegram ID,Balance,Bonus Balance,Coins Balance,Games Won,Tickets Bought,Created At');
+    
+    for (var u in users) {
+      final id = _escapeCsv(u['id'] ?? u['_id'] ?? '');
+      final username = _escapeCsv(u['username'] ?? '');
+      final phone = _escapeCsv(u['phone_number'] ?? u['phone'] ?? '');
+      final telegramId = _escapeCsv(u['telegram_id'] ?? '');
+      final balance = _escapeCsv(u['balance'] ?? 0);
+      final bonus = _escapeCsv(u['bonus_balance'] ?? 0);
+      final coins = _escapeCsv(u['coins_balance'] ?? 0);
+      final won = _escapeCsv(u['totalGamesWon'] ?? 0);
+      final tickets = _escapeCsv(u['totalTicketsBought'] ?? 0);
+      final createdAt = _escapeCsv(u['createdAt'] ?? '');
+
+      buffer.writeln('$id,$username,$phone,$telegramId,$balance,$bonus,$coins,$won,$tickets,$createdAt');
     }
+    return buffer.toString();
+  }
+
+  String _escapeCsv(dynamic val) {
+    final str = val.toString();
+    if (str.contains(',') || str.contains('"') || str.contains('\n')) {
+      return '"${str.replaceAll('"', '""')}"';
+    }
+    return str;
   }
 
   // 6. ሩም መመዝገብ (Create Room)
